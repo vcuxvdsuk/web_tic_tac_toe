@@ -9,7 +9,7 @@ app.use(express.json());
 
 setupSwagger(app);
 
-app.use("/grid", router);
+app.use("/api/grid", router);
 
 app.get("/", (req, res) => {
     res.send("Welcome to the Tic Tac Toe API");

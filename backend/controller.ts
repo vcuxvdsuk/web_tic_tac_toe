@@ -36,7 +36,19 @@ export const controller = {
         }
     },
 
+    async getAll(req: Request, res: Response) {
+        try {
+            const grids = await serviceImpl.getAllGrids();
+            res.status(200).json(grids);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    },
+
     async update(req: Request, res: Response) {
+        // req.body: { position: number, sign: "X" | "O" }
+        // position is 0-8 representing the cell in the 3x3 grid
         try {
             const { id } = req.params;
             const { position, sign } = req.body;
@@ -69,6 +81,16 @@ export const controller = {
         try {
             const { id } = req.params;
             await serviceImpl.deleteGrid(id);
+            res.status(204).send();
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    },
+
+    async deleteAll(req: Request, res: Response) {
+        try {
+            await serviceImpl.deleteAllGrids();
             res.status(204).send();
         } catch (error) {
             console.error(error);

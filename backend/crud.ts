@@ -28,6 +28,15 @@ export const gridRepository = {
             cells: dbGrid.cells as string[][],
         };
     },
+
+    async findAll(): Promise<Grid[]> {
+        const grids = await prisma.grid.findMany();
+        return grids.map((grid) => ({
+            id: grid.id,
+            cells: grid.cells as string[][],
+        }));
+    },
+
     async update(id: string, data: Partial<Grid>): Promise<Grid> {
         const updatedGrid = await prisma.grid.update({
             where: { id },
@@ -40,5 +49,9 @@ export const gridRepository = {
         await prisma.grid.delete({
             where: { id },
         });
+    },
+
+    async deleteAll(): Promise<void> {
+        await prisma.grid.deleteMany();
     },
 };

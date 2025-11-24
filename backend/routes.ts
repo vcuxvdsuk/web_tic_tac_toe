@@ -4,8 +4,8 @@ import { controller } from "./controller.ts";
 export const router = express.Router();
 /**
  * @swagger
- * /grid:
- *   get:
+ * /api/grid:
+ *   post:
  *     summary: Create a new Tic Tac Toe grid
  *     responses:
  *       201:
@@ -13,11 +13,11 @@ export const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/", controller.create);
+router.post("/", controller.create);
 
 /**
  * @swagger
- * /grid/{id}:
+ * /api/grid/{id}:
  *   get:
  *     summary: Get a grid by ID
  *     parameters:
@@ -37,7 +37,7 @@ router.get("/:id", controller.getById);
 
 /**
  * @swagger
- * /grid/{id}:
+ * /api/grid/{id}:
  *   patch:
  *     summary: Update a cell in a Tic Tac Toe grid
  *     description: Updates a specific cell in the Tic Tac Toe grid with the given player's sign.
@@ -73,3 +73,49 @@ router.get("/:id", controller.getById);
  *         description: Internal server error.
  */
 router.patch("/:id", controller.update);
+
+/**
+ * @swagger
+ * /api/grid:
+ *   get:
+ *     summary: Get all grids
+ *     responses:
+ *       200:
+ *         description: Grids found
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/", controller.getAll);
+
+/**
+ * @swagger
+ * /api/grid/{id}:
+ *   delete:
+ *     summary: Delete a grid by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Grid ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Grid deleted successfully
+ *       404:
+ *         description: Grid not found
+ */
+router.delete("/:id", controller.delete);
+
+/**
+ * @swagger
+ * /api/grid:
+ *  delete:
+ *     summary: Delete all grids
+ *     responses:
+ *       200:
+ *         description: Grids deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete("/", controller.deleteAll);

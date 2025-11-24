@@ -10,12 +10,23 @@ class serviceImplementation implements service {
         return await gridRepository.save(cells);
     }
 
+    async getAllGrids(): Promise<Grid[]> {
+        return await gridRepository.findAll();
+    }
+
     async updateGrid(id: string, data: Partial<Grid>): Promise<Grid> {
         return await gridRepository.update(id, data);
     }
 
     async deleteGrid(id: string): Promise<void> {
         return await gridRepository.delete(id);
+    }
+
+    async deleteAllGrids(): Promise<void> {
+        const grids = await gridRepository.findAll();
+        for (const grid of grids) {
+            await gridRepository.delete(grid.id);
+        }
     }
 }
 
