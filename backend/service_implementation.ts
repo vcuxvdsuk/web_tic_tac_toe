@@ -6,8 +6,12 @@ class serviceImplementation implements service {
     async getGridById(id: string): Promise<Grid | null> {
         return await gridRepository.findById(id);
     }
-    async createGrid(cells: string[][]): Promise<Grid> {
-        return await gridRepository.save(cells);
+    async createGrid(
+        cells: string[][],
+        playerX: string,
+        playerO: string
+    ): Promise<Grid> {
+        return await gridRepository.save(cells, playerX, playerO);
     }
 
     async getAllGrids(): Promise<Grid[]> {

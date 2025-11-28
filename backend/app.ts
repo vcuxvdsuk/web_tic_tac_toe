@@ -1,6 +1,9 @@
 import cors from "cors";
 import express from "express";
+import http from "http";
+import { Server } from "socket.io";
 import { router } from "./routes.ts";
+import { socketListeners } from "./socketListeners.ts";
 import { setupSwagger } from "./swagger";
 
 export const app = express();
@@ -9,8 +12,14 @@ app.use(express.json());
 
 setupSwagger(app);
 
-app.use("/api/grid", router);
-
-app.get("/", (req, res) => {
-    res.send("Welcome to the Tic Tac Toe API");
+export const server = http.createServer(app);
+export const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST", "PATCH", "DELETE"],
+    },
 });
+
+socketListeners(io, io.sockets);
+
+app.use("/api/grid", router);

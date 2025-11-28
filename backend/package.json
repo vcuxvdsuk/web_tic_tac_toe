@@ -13,10 +13,11 @@
     "type": "module",
     "license": "ISC",
     "dependencies": {
-        "@prisma/client": "^6.19.0",
+        "@prisma/client": "^7.0.1",
         "cors": "^2.8.5",
         "express": "^5.1.0",
-        "prisma": "^6.19.0",
+        "prisma": "^7.0.1",
+        "socket.io": "^4.8.1",
         "swagger": "^0.7.5",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",

@@ -1,5 +1,10 @@
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { v4 as uuid } from "uuid";
+
+const socket = io("http://localhost:3000");
+
 export default function Grid() {
     const [grid, setGrid] = useState([
         ["", "", ""],
@@ -22,6 +27,7 @@ export default function Grid() {
         setGrid(newGrid);
         setTurn(turn === "X" ? "O" : "X");
 
+        // Update the grid on the server via REST API
         axios
             .patch(`/api/grid/${gridId}`, {
                 position: row * 3 + col,
@@ -29,6 +35,12 @@ export default function Grid() {
             })
             .then((response) => {
                 console.log("Grid updated:", response.data);
+                socket.emit("makeMove", {
+                    gridId: gridId,
+                    position: row * 3 + col,
+                    sign: turn,
+                    playerId: "player1", // Example player ID
+                });
             })
             .catch((error) => {
                 console.error("Error updating grid:", error);
@@ -80,6 +92,37 @@ export default function Grid() {
             setGridId(String(response.data.id));
             console.log("New game started:", response.data);
         });
+        if (!gridId) {
+            console.error("No gridId");
+        }
+    }
+
+    useEffect(() => {
+        socket.on("moveMade", (newGrid) => {
+            setGrid(newGrid.cells);
+            setTurn(newGrid.turn);
+            checkWin(newGrid.cells);
+        });
+
+        socket.on("gameOver", (message: string) => {
+            alert(message);
+            setGameOver(true);
+        });
+
+        if (!localStorage.getItem("playerId")) {
+            localStorage.setItem("playerId", uuid());
+        }
+
+        return () => {
+            socket.off("moveMade");
+            socket.off("gameOver");
+        };
+    }, []);
+
+    const [initialized, setInitialized] = useState(false);
+    if (!initialized) {
+        setInitialized(true); // this run once
+        newGame();
     }
 
     return (

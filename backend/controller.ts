@@ -14,7 +14,13 @@ export const controller = {
                 ["", "", ""],
                 ["", "", ""],
             ];
-            const newGrid = await serviceImpl.createGrid(cells);
+            let playerX = req.body.playerX || "Player X";
+            let playerO = req.body.playerO || "Player O";
+            const newGrid = await serviceImpl.createGrid(
+                cells,
+                playerX,
+                playerO
+            );
             res.status(201).json(newGrid);
         } catch (error) {
             console.error(error);
@@ -49,19 +55,24 @@ export const controller = {
     async update(req: Request, res: Response) {
         // req.body: { position: number, sign: "X" | "O" }
         // position is 0-8 representing the cell in the 3x3 grid
+
         try {
             const { id } = req.params;
-            const { position, sign } = req.body;
+            const { position, sign, playerId } = req.body;
             const grid = await serviceImpl.getGridById(id);
             if (!grid) {
                 return res.status(404).json({ error: "Grid not found" });
             }
-            if (position < 0 || position > 8) {
+            if (isValidPosition(position) === false) {
                 return res.status(400).json({ error: "Invalid position" });
             }
-            if (sign !== "X" && sign !== "O") {
+            if (isValidSign(sign) === false) {
                 return res.status(400).json({ error: "Invalid sign" });
             }
+            if (grid.turn !== sign) {
+                return res.status(400).json({ error: "Not your turn" });
+            }
+
             const cells = grid.cells;
             const row = Math.floor(position / 3);
             const col = position % 3;
@@ -69,7 +80,11 @@ export const controller = {
                 return res.status(400).json({ error: "Cell already occupied" });
             }
             cells[row][col] = sign;
-            const updatedGrid = await serviceImpl.updateGrid(id, { cells });
+            grid.turn = sign === "X" ? "O" : "X";
+            const updatedGrid = await serviceImpl.updateGrid(id, {
+                cells,
+                turn: grid.turn,
+            });
             res.status(200).json(updatedGrid);
         } catch (error) {
             console.error(error);
@@ -98,3 +113,13 @@ export const controller = {
         }
     },
 };
+
+///////////////////////////////////
+//controller util
+function isValidSign(sign: string): boolean {
+    return sign === "X" || sign === "O";
+}
+
+function isValidPosition(position: number): boolean {
+    return position >= 0 && position <= 8;
+}

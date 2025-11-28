@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { toAppGrid } from "./mapper.ts";
 import type { Grid } from "./model.ts";
 
 const prisma = new PrismaClient();
@@ -11,30 +12,31 @@ export const gridRepository = {
         if (!grid) return null;
 
         //convert Json to string[][] for app model from prisma model
-        return {
-            id: grid.id,
-            cells: grid.cells as string[][],
-        };
+        return toAppGrid(grid);
     },
 
-    async save(cells: string[][]): Promise<Grid> {
+    async save(
+        cells: string[][],
+        playerX: string,
+        playerO: string
+    ): Promise<Grid> {
         const dbGrid = await prisma.grid.create({
-            data: { cells },
+            data: {
+                cells,
+                turn: "X",
+                players: { X: playerX, O: playerO } as Prisma.JsonObject,
+                gameOver: false,
+                winner: null,
+            },
         });
 
         // Convert back
-        return {
-            id: dbGrid.id,
-            cells: dbGrid.cells as string[][],
-        };
+        return toAppGrid(dbGrid);
     },
 
     async findAll(): Promise<Grid[]> {
         const grids = await prisma.grid.findMany();
-        return grids.map((grid) => ({
-            id: grid.id,
-            cells: grid.cells as string[][],
-        }));
+        return grids.map((grid) => toAppGrid(grid));
     },
 
     async update(id: string, data: Partial<Grid>): Promise<Grid> {
@@ -42,7 +44,7 @@ export const gridRepository = {
             where: { id },
             data: { cells: data.cells },
         });
-        return updatedGrid as Grid;
+        return toAppGrid(updatedGrid);
     },
 
     async delete(id: string): Promise<void> {

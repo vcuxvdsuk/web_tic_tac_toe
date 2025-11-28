@@ -7,14 +7,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum Turn {
+  X
+  O
 }
 
 model Grid {
   id        String   @id @default(uuid())
   cells     Json
+  turn      Turn
+  players   Json
+  gameOver  Boolean  @default(false)
+  winner    String? //null if no winner yet or draw
   createdAt DateTime @default(now())
 }
