@@ -1,8 +1,14 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
 import { toAppGrid } from "./mapper.ts";
 import type { Grid } from "./model.ts";
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const adapter = new PrismaPg(pool); // Using the pool instance
+
+const prisma = new PrismaClient({ adapter });
 
 export const gridRepository = {
     async findById(id: string): Promise<Grid | null> {

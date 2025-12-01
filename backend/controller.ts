@@ -24,7 +24,7 @@ export const controller = {
             res.status(201).json(newGrid);
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({ error: "Internal server error, create" });
         }
     },
     async getById(req: Request, res: Response) {
@@ -38,7 +38,7 @@ export const controller = {
             }
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({ error: "Internal server error, get by id" });
         }
     },
 
@@ -48,7 +48,7 @@ export const controller = {
             res.status(200).json(grids);
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({ error: "Internal server error, get all" });
         }
     },
 
@@ -58,7 +58,11 @@ export const controller = {
 
         try {
             const { id } = req.params;
-            const { position, sign, playerId } = req.body;
+            const { position, sign, playerId } = req.body as {
+                position: number;
+                sign: "X" | "O";
+                playerId: string;
+            };
             const grid = await serviceImpl.getGridById(id);
             if (!grid) {
                 return res.status(404).json({ error: "Grid not found" });
@@ -70,7 +74,14 @@ export const controller = {
                 return res.status(400).json({ error: "Invalid sign" });
             }
             if (grid.turn !== sign) {
+                // check if its the correct sign's turn
                 return res.status(400).json({ error: "Not your turn" });
+            }
+            if (grid.players[sign] !== playerId) {
+                // check if the player is the correct player
+                return res
+                    .status(400)
+                    .json({ error: "Invalid player, not your turn" });
             }
 
             const cells = grid.cells;
@@ -88,7 +99,7 @@ export const controller = {
             res.status(200).json(updatedGrid);
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({ error: "Internal server error, update" });
         }
     },
 
@@ -99,7 +110,7 @@ export const controller = {
             res.status(204).send();
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({ error: "Internal server error, delete" });
         }
     },
 
@@ -109,7 +120,9 @@ export const controller = {
             res.status(204).send();
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({
+                error: "Internal server error, delete all",
+            });
         }
     },
 };
