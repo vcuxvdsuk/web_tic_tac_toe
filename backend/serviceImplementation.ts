@@ -9,19 +9,32 @@ class serviceImplementation implements service {
         }
         return await gridRepository.findById(id);
     }
-    async createGrid(
-        cells: string[][],
-        playerX: string,
-        playerO: string
-    ): Promise<Grid> {
-        if (
-            !isValidCells(cells) ||
-            !isValidString(playerX) ||
-            !isValidString(playerO)
-        ) {
+    async createGrid(playerX: string): Promise<Grid> {
+        if (!isValidString(playerX)) {
             throw new Error("Invalid input data");
         }
-        return await gridRepository.save(cells, playerX, playerO);
+        return await gridRepository.create(playerX);
+    }
+
+    async joinGame(playerId: string): Promise<Grid> {
+        const grid = await gridRepository.findFreeGrid();
+
+        if (!grid) {
+            throw new Error("No available grid");
+        }
+
+        // mutate local object
+        if (!grid.players.X) {
+            grid.players.X = playerId;
+        } else if (!grid.players.Y) {
+            grid.players.Y = playerId;
+        }
+
+        const updatedGrid = await gridRepository.update(grid.id, {
+            players: grid.players,
+        });
+
+        return updatedGrid;
     }
 
     async getAllGrids(): Promise<Grid[]> {

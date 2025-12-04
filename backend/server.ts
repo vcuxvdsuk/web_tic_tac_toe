@@ -1,4 +1,6 @@
+import dotenv from "dotenv";
 import { server } from "./app.ts";
+dotenv.config();
 
 const PORT = 3000;
 

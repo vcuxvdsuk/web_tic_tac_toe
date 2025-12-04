@@ -44,6 +44,6 @@
         // "noFallthroughCasesInSwitch": true,
         // "noPropertyAccessFromIndexSignature": true,
     },
-    "include": ["src/**/*", "prisma/**/*", "prisma.config.ts"],
+    "include": ["./**/*.ts"],
     "exclude": ["node_modules"]
 }

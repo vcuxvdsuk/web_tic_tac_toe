@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { serviceImpl } from "./service_implementation";
-// import { getUserData, saveUserData } from '../services/userService';
+import { applyMove } from "./gameLogic.ts";
+import { serviceImpl } from "./serviceImplementation.ts";
 
 export const controller = {
     async init(req: Request, res: Response) {
@@ -9,18 +9,8 @@ export const controller = {
     },
     async create(req: Request, res: Response) {
         try {
-            const cells = [
-                ["", "", ""],
-                ["", "", ""],
-                ["", "", ""],
-            ];
             let playerX = req.body.playerX || "Player X";
-            let playerO = req.body.playerO || "Player O";
-            const newGrid = await serviceImpl.createGrid(
-                cells,
-                playerX,
-                playerO
-            );
+            const newGrid = await serviceImpl.createGrid(playerX);
             res.status(201).json(newGrid);
         } catch (error) {
             console.error(error);
@@ -29,7 +19,11 @@ export const controller = {
     },
     async getById(req: Request, res: Response) {
         try {
+            if (!req.params.id) {
+                return res.status(400).json({ error: "Grid ID is required" });
+            }
             const { id } = req.params;
+
             const grid = await serviceImpl.getGridById(id);
             if (grid) {
                 res.status(200).json(grid);
@@ -39,6 +33,26 @@ export const controller = {
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Internal server error, get by id" });
+        }
+    },
+
+    async join(req: Request, res: Response) {
+        try {
+            if (!req.params.id) {
+                return res.status(400).json({ error: "Grid ID is required" });
+            }
+            const { id } = req.params;
+            const { playerId } = req.body;
+
+            if (!playerId) {
+                return res.status(400).json({ error: "Player ID is required" });
+            }
+
+            const updatedGrid = await serviceImpl.joinGame(playerId);
+            res.status(200).json(updatedGrid);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal server error, join" });
         }
     },
 
@@ -53,58 +67,41 @@ export const controller = {
     },
 
     async update(req: Request, res: Response) {
-        // req.body: { position: number, sign: "X" | "O" }
-        // position is 0-8 representing the cell in the 3x3 grid
-
         try {
-            const { id } = req.params;
-            const { position, sign, playerId } = req.body as {
-                position: number;
-                sign: "X" | "O";
-                playerId: string;
-            };
-            const grid = await serviceImpl.getGridById(id);
-            if (!grid) {
-                return res.status(404).json({ error: "Grid not found" });
-            }
-            if (isValidPosition(position) === false) {
-                return res.status(400).json({ error: "Invalid position" });
-            }
-            if (isValidSign(sign) === false) {
-                return res.status(400).json({ error: "Invalid sign" });
-            }
-            if (grid.turn !== sign) {
-                // check if its the correct sign's turn
-                return res.status(400).json({ error: "Not your turn" });
-            }
-            if (grid.players[sign] !== playerId) {
-                // check if the player is the correct player
-                return res
-                    .status(400)
-                    .json({ error: "Invalid player, not your turn" });
+            if (!req.params.id) {
+                return res.status(400).json({ error: "Grid ID is required" });
             }
 
-            const cells = grid.cells;
-            const row = Math.floor(position / 3);
-            const col = position % 3;
-            if (cells[row][col] !== "") {
-                return res.status(400).json({ error: "Cell already occupied" });
+            const { id } = req.params;
+            const { position, sign, playerId } = req.body;
+
+            const grid = await serviceImpl.getGridById(id);
+
+            try {
+                const result = applyMove(grid, { position, sign, playerId });
+
+                const updatedGrid = await serviceImpl.updateGrid(id, {
+                    cells: result.updatedCells,
+                    turn: result.nextTurn as "X" | "O",
+                });
+
+                return res.status(200).json(updatedGrid);
+            } catch (moveErr: any) {
+                return res.status(400).json({ error: moveErr.message });
             }
-            cells[row][col] = sign;
-            grid.turn = sign === "X" ? "O" : "X";
-            const updatedGrid = await serviceImpl.updateGrid(id, {
-                cells,
-                turn: grid.turn,
-            });
-            res.status(200).json(updatedGrid);
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error, update" });
+            return res
+                .status(500)
+                .json({ error: "Internal server error, update" });
         }
     },
 
     async delete(req: Request, res: Response) {
         try {
+            if (!req.params.id) {
+                return res.status(400).json({ error: "Grid ID is required" });
+            }
             const { id } = req.params;
             await serviceImpl.deleteGrid(id);
             res.status(204).send();
@@ -126,13 +123,3 @@ export const controller = {
         }
     },
 };
-
-///////////////////////////////////
-//controller util
-function isValidSign(sign: string): boolean {
-    return sign === "X" || sign === "O";
-}
-
-function isValidPosition(position: number): boolean {
-    return position >= 0 && position <= 8;
-}

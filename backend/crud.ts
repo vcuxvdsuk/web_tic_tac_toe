@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
@@ -6,7 +9,7 @@ import type { Grid } from "./model.ts";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-const adapter = new PrismaPg(pool); // Using the pool instance
+const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
@@ -17,27 +20,42 @@ export const gridRepository = {
         });
         if (!grid) return null;
 
-        //convert Json to string[][] for app model from prisma model
         return toAppGrid(grid);
     },
 
-    async save(
-        cells: string[][],
-        playerX: string,
-        playerO: string
-    ): Promise<Grid> {
+    async create(playerX: string): Promise<Grid> {
+        const cells = [
+            ["", "", ""],
+            ["", "", ""],
+            ["", "", ""],
+        ];
+
         const dbGrid = await prisma.grid.create({
             data: {
-                cells,
+                cells: cells as unknown as Prisma.JsonObject,
                 turn: "X",
-                players: { X: playerX, O: playerO } as Prisma.JsonObject,
+                players: { X: playerX } as Prisma.JsonObject,
                 gameOver: false,
                 winner: null,
             },
         });
 
-        // Convert back
         return toAppGrid(dbGrid);
+    },
+
+    async findFreeGrid(): Promise<Grid | null> {
+        const grid = await prisma.grid.findMany({
+            where: {
+                players: {
+                    path: ["Y"],
+                    equals: Prisma.JsonNull, // Free slot
+                },
+            },
+            take: 1, // return only first
+        });
+
+        if (!grid || !grid.length || !grid[0]) return null;
+        return toAppGrid(grid[0]);
     },
 
     async findAll(): Promise<Grid[]> {
@@ -46,10 +64,34 @@ export const gridRepository = {
     },
 
     async update(id: string, data: Partial<Grid>): Promise<Grid> {
+        const updateData: Prisma.GridUpdateInput = {};
+
+        if (data.cells !== undefined) {
+            updateData.cells = data.cells as unknown as Prisma.InputJsonValue;
+        }
+
+        if (data.players !== undefined) {
+            updateData.players =
+                data.players as unknown as Prisma.InputJsonValue;
+        }
+
+        if (data.winner !== undefined) {
+            updateData.winner = data.winner;
+        }
+
+        if (data.turn !== undefined) {
+            updateData.turn = data.turn;
+        }
+
+        if (data.gameOver !== undefined) {
+            updateData.gameOver = data.gameOver;
+        }
+
         const updatedGrid = await prisma.grid.update({
             where: { id },
-            data: { cells: data.cells },
+            data: updateData,
         });
+
         return toAppGrid(updatedGrid);
     },
 

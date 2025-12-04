@@ -1,4 +1,5 @@
-import { Grid, Prisma } from "@prisma/client";
+import type { Grid } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { Grid as AppGrid } from "./model.ts";
 
 export function toAppGrid(dbGrid: Grid): AppGrid {

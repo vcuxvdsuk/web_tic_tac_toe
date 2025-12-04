@@ -63,20 +63,6 @@ button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
 }
-.three-lines {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    height: 25px;
-    cursor: pointer;
-    gap: 5px;
-}
-.line {
-    font-size: 24px;
-    font-weight: bold;
-}
-
 .grid {
     display: grid;
     grid-template-columns: repeat(3, 100px);
@@ -96,15 +82,31 @@ button:disabled {
     cursor: pointer;
     border: 2px solid #333;
 }
+.cell:hover {
+    background-color: #e0e0e0;
+}
 .btn-reset {
     margin-top: 20px;
     padding: 10px 20px;
     font-size: 16px;
     border: 1px solid #000;
+    background-color: #0ea434;
 }
 .btn-reset:hover {
-    background-color: #ddd;
+    background-color: #1ee450;
 }
+
+.btn-join {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: 1px solid #000;
+    background-color: #4d96ee;
+}
+.btn-join:hover {
+    background-color: #77b0f7;
+}
+
 .selected {
     background-color: #a0e7e5;
 }

@@ -1,18 +1,32 @@
-import { serviceImpl } from "./service_implementation";
+import { applyMove } from "./gameLogic.ts";
+import { serviceImpl } from "./serviceImplementation.ts";
 
 export const socketHandlers = {
     async makeMove(socket: any, io: any, data: any) {
-        // { gridId: string, position: number, sign: "X" | "O", playerId: string }
         try {
-            const newGrid = await serviceImpl.updateGrid(data.gridId, {
-                cells: data.position,
-                turn: data.sign,
-            });
-            // Broadcast the move to all other connected clients
-            io.emit("moveMade", newGrid);
-        } catch (error) {
-            socket.emit("error", "Error updating grid");
-            console.error("Error updating grid:", error);
+            const { gridId, position, sign, playerId } = data;
+
+            const grid = await serviceImpl.getGridById(gridId);
+            if (!grid) {
+                return socket.emit("error", "Grid not found");
+            }
+
+            try {
+                const result = applyMove(grid, { position, sign, playerId });
+
+                const updatedGrid = await serviceImpl.updateGrid(gridId, {
+                    cells: result.updatedCells,
+                    turn: result.nextTurn as "X" | "O",
+                });
+
+                // Broadcast new updated state
+                io.emit("moveMade", updatedGrid);
+            } catch (moveErr: any) {
+                socket.emit("error", moveErr.message);
+            }
+        } catch (err) {
+            console.error("Socket move error:", err);
+            socket.emit("error", "Unexpected server error");
         }
     },
 };

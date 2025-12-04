@@ -15,93 +15,84 @@ export default function Grid() {
     const [gameOver, setGameOver] = useState(true);
     const [gridId, setGridId] = useState("");
 
-    function handleClick(row: number, col: number) {
+    async function handleClick(row: number, col: number) {
         if (gameOver) return;
-        if (grid[row][col] !== "") return; // Cell already occupied
 
-        const newGrid = grid.map((r, rowIndex) =>
-            r.map((cell, colIndex) =>
-                rowIndex === row && colIndex === col ? turn : cell
-            )
-        );
-        setGrid(newGrid);
-        setTurn(turn === "X" ? "O" : "X");
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) return;
+        if (!gridId) return;
 
-        // Update the grid on the server via REST API
-        axios
-            .patch(`/api/grid/${gridId}`, {
+        try {
+            const response = await axios.patch(`/api/grid/${gridId}`, {
                 position: row * 3 + col,
                 sign: turn,
-            })
-            .then((response) => {
-                console.log("Grid updated:", response.data);
-                socket.emit("makeMove", {
-                    gridId: gridId,
-                    position: row * 3 + col,
-                    sign: turn,
-                    playerId: "player1", // Example player ID
-                });
-            })
-            .catch((error) => {
-                console.error("Error updating grid:", error);
+                playerId,
             });
 
-        checkWin(newGrid);
-    }
-
-    function checkWin(cells: string[][]) {
-        const lines = [
-            // Rows
-            [cells[0][0], cells[0][1], cells[0][2]],
-            [cells[1][0], cells[1][1], cells[1][2]],
-            [cells[2][0], cells[2][1], cells[2][2]],
-            // Columns
-            [cells[0][0], cells[1][0], cells[2][0]],
-            [cells[0][1], cells[1][1], cells[2][1]],
-            [cells[0][2], cells[1][2], cells[2][2]],
-            // Diagonals
-            [cells[0][0], cells[1][1], cells[2][2]],
-            [cells[0][2], cells[1][1], cells[2][0]],
-        ];
-
-        for (const line of lines) {
-            if (line[0] !== "" && line[0] === line[1] && line[1] === line[2]) {
-                alert(`Player ${line[0]} wins!`);
-                setGameOver(true);
-                return;
-            }
-        }
-
-        // Check for draw
-        if (cells.flat().every((cell) => cell !== "")) {
-            alert("It's a draw!");
-            setGameOver(true);
+            const newGrid = response.data;
+            setGrid(newGrid.cells);
+            setTurn(newGrid.turn);
+            setGameOver(newGrid.status === "OVER");
+        } catch (error) {
+            console.error("Server rejected move:", error);
         }
     }
 
-    function newGame() {
-        console.log("New game");
-        setGameOver(false);
-        setGrid([
-            ["", "", ""],
-            ["", "", ""],
-            ["", "", ""],
-        ]);
-        setTurn("X");
-        axios.post("/api/grid").then((response) => {
-            setGridId(String(response.data.id));
-            console.log("New game started:", response.data);
+    async function newGame() {
+        const playerId = localStorage.getItem("playerId");
+
+        const response = await axios.post("/api/grid", {
+            playerX: playerId,
         });
-        if (!gridId) {
-            console.error("No gridId");
-        }
+
+        setGrid(response.data.cells);
+        setTurn(response.data.turn);
+        setGridId(response.data.id);
+        setGameOver(false);
     }
+
+    // When gridId changes, the second player will join
+    useEffect(() => {
+        if (!gridId) return;
+
+        axios
+            .post(`/api/grid/${gridId}/join`, {
+                playerId: localStorage.getItem("playerId"),
+            })
+            .then((res) => {
+                console.log("Joined game", res.data);
+            })
+            .catch((err) => {
+                console.error("Join failed", err);
+            });
+    }, [gridId]);
 
     useEffect(() => {
+        // Assign unique player id once
+        if (!localStorage.getItem("playerId")) {
+            localStorage.setItem("playerId", uuid());
+        }
+
+        const startGame = async () => {
+            await newGame();
+        };
+
+        startGame(); // now async inside effect
+
+        socket.emit("joinGame");
+
+        socket.on("joined", (grid) => {
+            setGrid(grid);
+        });
+
+        socket.on("updateGrid", (grid) => {
+            setGrid(grid);
+        });
+        // Socket listeners:
         socket.on("moveMade", (newGrid) => {
             setGrid(newGrid.cells);
             setTurn(newGrid.turn);
-            checkWin(newGrid.cells);
+            setGameOver(newGrid.status === "OVER");
         });
 
         socket.on("gameOver", (message: string) => {
@@ -109,21 +100,11 @@ export default function Grid() {
             setGameOver(true);
         });
 
-        if (!localStorage.getItem("playerId")) {
-            localStorage.setItem("playerId", uuid());
-        }
-
         return () => {
             socket.off("moveMade");
             socket.off("gameOver");
         };
     }, []);
-
-    const [initialized, setInitialized] = useState(false);
-    if (!initialized) {
-        setInitialized(true); // this run once
-        newGame();
-    }
 
     return (
         <>
@@ -140,6 +121,7 @@ export default function Grid() {
                     ))
                 )}
             </div>
+
             <button className="btn-reset" onClick={newGame}>
                 New Game
             </button>
