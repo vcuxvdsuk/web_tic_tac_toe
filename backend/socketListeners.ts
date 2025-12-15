@@ -7,6 +7,9 @@ export const socketListeners = (io: any) => {
         socket.on("makeMove", (data: any) =>
             socketHandlers.makeMove(socket, io, data)
         );
+        socket.on("joinGame", (playerId: string) =>
+            socketHandlers.joinGame(socket, io, playerId)
+        );
 
         socket.on("disconnect", () => {
             console.log("Client disconnected", socket.id);

@@ -1,13 +1,11 @@
 import "./App.css";
 
-import Grid from "./components/grid";
-import JoinButton from "./components/join_btn";
+import Gpage from "./components/GamrPage";
 
 function App() {
     return (
         <>
-            <Grid />
-            <JoinButton onJoined={() => {}} />
+            <Gpage />
         </>
     );
 }

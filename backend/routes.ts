@@ -17,35 +17,6 @@ router.post("/", controller.create);
 
 /**
  * @swagger
- * /api/grid/${gridId}/join:
- *   post:
- *    summary: Join an existing Tic Tac Toe game
- *    parameters:
- *      - name: gridId
- *        in: path
- *        required: true
- *        description: The grid's unique identifier
- *        schema:
- *          type: string
- *    requestBody:
- *      required: true
- *      content:
- *        application/json:
- *          schema:
- *            type: object
- *            properties:
- *              playerId:
- *                type: string
- *    responses:
- *      200:
- *        description: Grid joined successfully
- *      500:
- *        description: Internal server error
- */
-router.post("/:id/join", controller.join);
-
-/**
- * @swagger
  * /api/grid/{id}:
  *   get:
  *     summary: Get a grid by ID

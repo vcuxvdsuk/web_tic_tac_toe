@@ -1,96 +1,56 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
 import { v4 as uuid } from "uuid";
+import { socket } from "../socket";
 
-const socket = io("http://localhost:3000");
+interface GridProps {
+    initialGrid: FullGridDto;
+}
 
-export default function Grid() {
-    const [grid, setGrid] = useState([
-        ["", "", ""],
-        ["", "", ""],
-        ["", "", ""],
-    ]);
-    const [turn, setTurn] = useState<"X" | "O">("X");
-    const [gameOver, setGameOver] = useState(true);
-    const [gridId, setGridId] = useState("");
+interface PlayerMap {
+    X: string | null;
+    O: string | null;
+}
+
+export interface FullGridDto {
+    id: string;
+    cells: string[][];
+    players: PlayerMap;
+    turn: "X" | "O";
+    status: string;
+}
+
+export default function Grid({ initialGrid }: GridProps) {
+    const [grid, setGrid] = useState<FullGridDto>(initialGrid);
+    const [turn, setTurn] = useState<"X" | "O">(initialGrid.turn);
+    const [gameOver, setGameOver] = useState(initialGrid.status === "OVER");
 
     async function handleClick(row: number, col: number) {
         if (gameOver) return;
 
         const playerId = localStorage.getItem("playerId");
         if (!playerId) return;
-        if (!gridId) return;
 
-        try {
-            const response = await axios.patch(`/api/grid/${gridId}`, {
-                position: row * 3 + col,
-                sign: turn,
-                playerId,
-            });
+        if (!grid) return;
+        if (turn === "O" && grid.players.O === null) return;
+        if (turn === "X" && grid.players.X === null) return;
 
-            const newGrid = response.data;
-            setGrid(newGrid.cells);
-            setTurn(newGrid.turn);
-            setGameOver(newGrid.status === "OVER");
-        } catch (error) {
-            console.error("Server rejected move:", error);
-        }
-    }
-
-    async function newGame() {
-        const playerId = localStorage.getItem("playerId");
-
-        const response = await axios.post("/api/grid", {
-            playerX: playerId,
+        socket.emit("makeMove", {
+            gridId: grid.id,
+            position: row * 3 + col,
+            sign: turn,
+            playerId,
         });
-
-        setGrid(response.data.cells);
-        setTurn(response.data.turn);
-        setGridId(response.data.id);
-        setGameOver(false);
     }
 
-    // When gridId changes, the second player will join
     useEffect(() => {
-        if (!gridId) return;
-
-        axios
-            .post(`/api/grid/${gridId}/join`, {
-                playerId: localStorage.getItem("playerId"),
-            })
-            .then((res) => {
-                console.log("Joined game", res.data);
-            })
-            .catch((err) => {
-                console.error("Join failed", err);
-            });
-    }, [gridId]);
-
-    useEffect(() => {
-        // Assign unique player id once
         if (!localStorage.getItem("playerId")) {
             localStorage.setItem("playerId", uuid());
         }
+    }, []);
 
-        const startGame = async () => {
-            await newGame();
-        };
-
-        startGame(); // now async inside effect
-
-        socket.emit("joinGame");
-
-        socket.on("joined", (grid) => {
-            setGrid(grid);
-        });
-
-        socket.on("updateGrid", (grid) => {
-            setGrid(grid);
-        });
-        // Socket listeners:
-        socket.on("moveMade", (newGrid) => {
-            setGrid(newGrid.cells);
+    useEffect(() => {
+        socket.on("updateGrid", (newGrid) => {
+            setGrid(newGrid);
             setTurn(newGrid.turn);
             setGameOver(newGrid.status === "OVER");
         });
@@ -101,30 +61,24 @@ export default function Grid() {
         });
 
         return () => {
-            socket.off("moveMade");
+            socket.off("updateGrid");
             socket.off("gameOver");
         };
     }, []);
 
     return (
-        <>
-            <div className="grid">
-                {grid.map((row, rowIndex) =>
-                    row.map((cell, colIndex) => (
-                        <div
-                            key={`${rowIndex}-${colIndex}`}
-                            className="cell"
-                            onClick={() => handleClick(rowIndex, colIndex)}
-                        >
-                            {cell}
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <button className="btn-reset" onClick={newGame}>
-                New Game
-            </button>
-        </>
+        <div className="grid">
+            {grid?.cells.map((row, rowIndex) =>
+                row.map((cell, colIndex) => (
+                    <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className="cell"
+                        onClick={() => handleClick(rowIndex, colIndex)}
+                    >
+                        {cell}
+                    </div>
+                ))
+            )}
+        </div>
     );
 }

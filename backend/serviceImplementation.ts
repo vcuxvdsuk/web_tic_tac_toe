@@ -26,10 +26,9 @@ class serviceImplementation implements service {
         // mutate local object
         if (!grid.players.X) {
             grid.players.X = playerId;
-        } else if (!grid.players.Y) {
-            grid.players.Y = playerId;
+        } else if (!grid.players.O) {
+            grid.players.O = playerId;
         }
-
         const updatedGrid = await gridRepository.update(grid.id, {
             players: grid.players,
         });

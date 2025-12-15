@@ -36,12 +36,10 @@ export const controller = {
         }
     },
 
+    /*
+///redandent, join using sockets
     async join(req: Request, res: Response) {
         try {
-            if (!req.params.id) {
-                return res.status(400).json({ error: "Grid ID is required" });
-            }
-            const { id } = req.params;
             const { playerId } = req.body;
 
             if (!playerId) {
@@ -49,12 +47,14 @@ export const controller = {
             }
 
             const updatedGrid = await serviceImpl.joinGame(playerId);
-            res.status(200).json(updatedGrid);
+
+            return res.status(200).json(updatedGrid);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Internal server error, join" });
         }
     },
+*/
 
     async getAll(req: Request, res: Response) {
         try {
@@ -68,24 +68,23 @@ export const controller = {
 
     async update(req: Request, res: Response) {
         try {
-            if (!req.params.id) {
-                return res.status(400).json({ error: "Grid ID is required" });
-            }
-
             const { id } = req.params;
             const { position, sign, playerId } = req.body;
 
-            const grid = await serviceImpl.getGridById(id);
+            const grid = await serviceImpl.getGridById(id!);
+            if (!grid) return res.status(404).json({ error: "Grid not found" });
 
             try {
                 const result = applyMove(grid, { position, sign, playerId });
 
-                const updatedGrid = await serviceImpl.updateGrid(id, {
+                await serviceImpl.updateGrid(id!, {
                     cells: result.updatedCells,
                     turn: result.nextTurn as "X" | "O",
                 });
 
-                return res.status(200).json(updatedGrid);
+                const fullGrid = await serviceImpl.getGridById(id!);
+
+                return res.status(200).json(fullGrid);
             } catch (moveErr: any) {
                 return res.status(400).json({ error: moveErr.message });
             }

@@ -34,7 +34,10 @@ export const gridRepository = {
             data: {
                 cells: cells as unknown as Prisma.JsonObject,
                 turn: "X",
-                players: { X: playerX } as Prisma.JsonObject,
+                players: {
+                    X: playerX,
+                    O: null, // explicitly free slot
+                } as Prisma.JsonObject,
                 gameOver: false,
                 winner: null,
             },
@@ -44,18 +47,19 @@ export const gridRepository = {
     },
 
     async findFreeGrid(): Promise<Grid | null> {
-        const grid = await prisma.grid.findMany({
-            where: {
-                players: {
-                    path: ["Y"],
-                    equals: Prisma.JsonNull, // Free slot
-                },
-            },
-            take: 1, // return only first
+        const grids = await prisma.grid.findMany({
+            where: { gameOver: false },
+            take: 10,
         });
 
-        if (!grid || !grid.length || !grid[0]) return null;
-        return toAppGrid(grid[0]);
+        // Find first grid where O is free in JS
+        const freeGrid = grids.find(
+            (g) => g.players && (g.players as any)["O"] === null
+        );
+
+        if (!freeGrid) return null;
+
+        return toAppGrid(freeGrid);
     },
 
     async findAll(): Promise<Grid[]> {
