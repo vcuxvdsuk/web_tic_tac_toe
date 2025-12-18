@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { io } from "./app.ts";
 import { applyMove } from "./gameLogic.ts";
 import { serviceImpl } from "./serviceImplementation.ts";
 
@@ -36,26 +37,6 @@ export const controller = {
         }
     },
 
-    /*
-///redandent, join using sockets
-    async join(req: Request, res: Response) {
-        try {
-            const { playerId } = req.body;
-
-            if (!playerId) {
-                return res.status(400).json({ error: "Player ID is required" });
-            }
-
-            const updatedGrid = await serviceImpl.joinGame(playerId);
-
-            return res.status(200).json(updatedGrid);
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: "Internal server error, join" });
-        }
-    },
-*/
-
     async getAll(req: Request, res: Response) {
         try {
             const grids = await serviceImpl.getAllGrids();
@@ -79,11 +60,22 @@ export const controller = {
 
                 await serviceImpl.updateGrid(id!, {
                     cells: result.updatedCells,
-                    turn: result.nextTurn as "X" | "O",
+                    turn: result.gameOver
+                        ? grid.turn
+                        : (result.nextTurn as "X" | "O"),
+                    gameOver: result.gameOver,
+                    winner: result.winner,
                 });
 
                 const fullGrid = await serviceImpl.getGridById(id!);
+                io.to(id!).emit("updateGrid", fullGrid);
 
+                if (result.gameOver) {
+                    io.to(id!).emit(
+                        "gameOver",
+                        result.winner ? `Winner: ${result.winner}` : "Draw"
+                    );
+                }
                 return res.status(200).json(fullGrid);
             } catch (moveErr: any) {
                 return res.status(400).json({ error: moveErr.message });

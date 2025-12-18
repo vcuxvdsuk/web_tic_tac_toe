@@ -17,27 +17,27 @@ export interface FullGridDto {
     players: PlayerMap;
     turn: "X" | "O";
     status: string;
+    winner: "X" | "O" | null;
+    gameOver: boolean;
 }
 
 export default function Grid({ initialGrid }: GridProps) {
     const [grid, setGrid] = useState<FullGridDto>(initialGrid);
-    const [turn, setTurn] = useState<"X" | "O">(initialGrid.turn);
-    const [gameOver, setGameOver] = useState(initialGrid.status === "OVER");
 
-    async function handleClick(row: number, col: number) {
-        if (gameOver) return;
+    function handleClick(row: number, col: number) {
+        if (grid.gameOver) return;
 
         const playerId = localStorage.getItem("playerId");
         if (!playerId) return;
 
-        if (!grid) return;
-        if (turn === "O" && grid.players.O === null) return;
-        if (turn === "X" && grid.players.X === null) return;
+        // Enforce player ownership
+        if (grid.turn === "X" && grid.players.X !== playerId) return;
+        if (grid.turn === "O" && grid.players.O !== playerId) return;
 
         socket.emit("makeMove", {
             gridId: grid.id,
             position: row * 3 + col,
-            sign: turn,
+            sign: grid.turn,
             playerId,
         });
     }
@@ -46,23 +46,28 @@ export default function Grid({ initialGrid }: GridProps) {
         if (!localStorage.getItem("playerId")) {
             localStorage.setItem("playerId", uuid());
         }
-    }, []);
 
-    useEffect(() => {
         socket.on("updateGrid", (newGrid) => {
             setGrid(newGrid);
-            setTurn(newGrid.turn);
-            setGameOver(newGrid.status === "OVER");
         });
 
         socket.on("gameOver", (message: string) => {
             alert(message);
-            setGameOver(true);
         });
 
         return () => {
             socket.off("updateGrid");
             socket.off("gameOver");
+        };
+    }, []);
+
+    useEffect(() => {
+        socket.on("moveRejected", ({ reason }) => {
+            console.warn("Move rejected:", reason);
+        });
+
+        return () => {
+            socket.off("moveRejected");
         };
     }, []);
 

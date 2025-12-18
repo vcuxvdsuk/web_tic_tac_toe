@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
 import { socket } from "../socket";
-
 import type { FullGridDto } from "./grid";
 
 interface JoinButtonProps {
@@ -15,15 +14,29 @@ export default function JoinButton({ onJoined }: JoinButtonProps) {
     useEffect(() => {
         const listener = (grid: FullGridDto) => {
             console.log("Server confirmed joined:", grid);
+            setLoading(false);
             onJoined(grid);
         };
 
-        socket.on("joined", listener);
+        socket.on("gameJoined", listener);
 
         return () => {
-            socket.off("joined", listener);
+            socket.off("gameJoined", listener);
         };
     }, [onJoined]);
+
+    useEffect(() => {
+        const onFail = (data: { reason: string }) => {
+            setLoading(false);
+            alert("Join failed: " + data.reason);
+        };
+
+        socket.on("joinFailed", onFail);
+
+        return () => {
+            socket.off("joinFailed", onFail);
+        };
+    }, []);
 
     async function handleJoin() {
         try {
@@ -38,8 +51,6 @@ export default function JoinButton({ onJoined }: JoinButtonProps) {
         } catch (err) {
             console.error(err);
             alert("Join failed");
-        } finally {
-            setLoading(false);
         }
     }
 

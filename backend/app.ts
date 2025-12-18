@@ -4,7 +4,7 @@ import http from "http";
 import { Server } from "socket.io";
 import { router } from "./routes.ts";
 import { socketListeners } from "./socketListeners.ts";
-import { setupSwagger } from "./swagger";
+import { setupSwagger } from "./swagger.ts";
 
 export const app = express();
 app.use(cors());
@@ -20,6 +20,6 @@ export const io = new Server(server, {
     },
 });
 
-socketListeners(io, io.sockets);
+socketListeners(io);
 
 app.use("/api/grid", router);

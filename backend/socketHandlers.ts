@@ -16,35 +16,72 @@ export const socketHandlers = {
             const { gridId, position, sign, playerId } = data;
 
             const grid = await serviceImpl.getGridById(gridId);
-            if (!grid) return socket.emit("error", "Grid not found");
+            if (!grid) {
+                socket.emit("moveRejected", { reason: "Grid not found" });
+                return;
+            }
 
+            let result;
             try {
-                const result = applyMove(grid, { position, sign, playerId });
+                result = applyMove(grid, { position, sign, playerId });
+            } catch (err: any) {
+                socket.emit("moveRejected", { reason: err.message });
+                return;
+            }
 
-                const updatedGrid = await serviceImpl.updateGrid(gridId, {
-                    cells: result.updatedCells,
-                    turn: result.nextTurn as "X" | "O",
-                });
+            const updatedGrid = await serviceImpl.updateGrid(gridId, {
+                cells: result.updatedCells,
+                turn: result.gameOver
+                    ? (grid.turn as "X" | "O")
+                    : (result.nextTurn as "X" | "O"),
+                gameOver: result.gameOver,
+                winner: result.winner,
+            });
 
-                // 🔹 Broadcast updated grid to all clients
-                io.emit("updateGrid", updatedGrid);
-            } catch (moveErr: any) {
-                socket.emit("error", moveErr.message);
+            io.to(gridId).emit("updateGrid", updatedGrid);
+
+            if (result.gameOver) {
+                io.to(gridId).emit(
+                    "gameOver",
+                    result.winner ? `Winner: ${result.winner}` : "Draw"
+                );
             }
         } catch (err) {
-            console.error("Socket move error:", err);
-            socket.emit("error", "Unexpected server error");
+            console.error("Socket makeMove error:", err);
+            socket.emit("moveRejected", { reason: "Internal server error" });
         }
     },
 
     async joinGame(socket: any, io: any, playerId: string) {
-        try {
-            const grid = await serviceImpl.joinGame(playerId);
-            socket.emit("joined", grid); // send full grid to joining player
-            io.emit("updateGrid", grid); // broadcast updated state to all clients
-        } catch (err) {
-            console.error("Socket join error:", err);
-            socket.emit("error", "Unexpected server error on join");
+        if (socket.data.gridId) {
+            socket.leave(socket.data.gridId);
         }
+
+        const grid = await serviceImpl.joinGame(playerId);
+
+        if (!grid) {
+            socket.emit("joinFailed", {
+                reason: "NO_AVAILABLE_GAME",
+            });
+            return;
+        }
+
+        socket.join(grid.id);
+        socket.data.gridId = grid.id;
+        socket.emit("gameJoined", grid);
+        socket.to(grid.id).emit("playerJoined", grid);
+    },
+
+    async newGame(socket: any, io: any, playerId: string) {
+        if (socket.data.gridId) {
+            socket.leave(socket.data.gridId);
+        }
+
+        const grid = await serviceImpl.createGrid(playerId);
+
+        socket.join(grid.id);
+        socket.data.gridId = grid.id;
+
+        socket.emit("gameJoined", grid);
     },
 };

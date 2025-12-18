@@ -14,19 +14,14 @@ export function isValidPosition(position: number): boolean {
     return position >= 0 && position <= 8;
 }
 
-export function applyMove(grid: any, move: MovePayload) {
+export function applyMove(
+    grid: any,
+    move: { position: number; sign: "X" | "O"; playerId: string }
+) {
     const { position, sign, playerId } = move;
 
-    if (!grid) {
-        throw new Error("Grid not found");
-    }
-
-    if (!isValidPosition(position)) {
-        throw new Error("Invalid position");
-    }
-
-    if (!isValidSign(sign)) {
-        throw new Error("Invalid sign");
+    if (grid.gameOver) {
+        throw new Error("Game is already over");
     }
 
     if (grid.turn !== sign) {
@@ -34,29 +29,54 @@ export function applyMove(grid: any, move: MovePayload) {
     }
 
     if (grid.players[sign] !== playerId) {
-        throw new Error("Invalid player, not your turn");
+        throw new Error("Invalid player");
     }
 
-    const cells = grid.cells;
     const row = Math.floor(position / 3);
     const col = position % 3;
 
-    if (!cells[row] || cells[row][col] === undefined) {
-        throw new Error("Invalid grid cell");
+    if (grid.cells[row][col] !== "") {
+        throw new Error("Cell already taken");
     }
 
-    if (cells[row][col] !== "") {
-        throw new Error("Cell already occupied");
-    }
+    const updatedCells = grid.cells.map((r: string[]) => [...r]);
+    updatedCells[row][col] = sign;
 
-    // Apply move
-    cells[row][col] = sign;
-
-    // Determine next turn
-    const nextTurn = sign === "X" ? "O" : "X";
+    const winner = checkWinner(updatedCells);
+    const draw = !winner && isDraw(updatedCells);
 
     return {
-        updatedCells: cells,
-        nextTurn,
+        updatedCells,
+        winner,
+        gameOver: Boolean(winner || draw),
+        nextTurn: sign === "X" ? "O" : "X",
     };
+}
+
+export type Sign = "X" | "O" | "";
+
+const WIN_LINES: readonly [number, number, number][] = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+];
+
+export function checkWinner(cells: Sign[][]): "X" | "O" | null {
+    const flat = cells.flat();
+
+    for (const [a, b, c] of WIN_LINES) {
+        if (flat[a] && flat[a] === flat[b] && flat[a] === flat[c]) {
+            return flat[a] as "X" | "O";
+        }
+    }
+    return null;
+}
+
+export function isDraw(cells: Sign[][]): boolean {
+    return cells.flat().every((c) => c !== "");
 }

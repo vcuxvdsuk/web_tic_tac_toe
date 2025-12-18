@@ -7,11 +7,19 @@ export const socketListeners = (io: any) => {
         socket.on("makeMove", (data: any) =>
             socketHandlers.makeMove(socket, io, data)
         );
+
         socket.on("joinGame", (playerId: string) =>
             socketHandlers.joinGame(socket, io, playerId)
         );
 
+        socket.on("createGame", (playerId: string) =>
+            socketHandlers.newGame(socket, io, playerId)
+        );
+
         socket.on("disconnect", () => {
+            if (socket.data.gridId) {
+                socket.leave(socket.data.gridId);
+            }
             console.log("Client disconnected", socket.id);
         });
     });

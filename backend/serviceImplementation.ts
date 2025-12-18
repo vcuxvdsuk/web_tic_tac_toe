@@ -18,9 +18,17 @@ class serviceImplementation implements service {
 
     async joinGame(playerId: string): Promise<Grid> {
         const grid = await gridRepository.findFreeGrid();
-
+        //check if a free grid is found
         if (!grid) {
-            throw new Error("No available grid");
+            return null as unknown as Grid;
+        }
+        //make sure its free to join
+        if (grid.players.X && grid.players.O) {
+            return null as unknown as Grid;
+        }
+        // prevent joining same player twice
+        if (grid.players.X === playerId || grid.players.O === playerId) {
+            return null as unknown as Grid;
         }
 
         // mutate local object
@@ -72,10 +80,6 @@ function isValidString(name: string): boolean {
 
 function isValidCells(cells: string[][]): boolean {
     return cells.length === 3 && cells.every((row) => row.length === 3);
-}
-
-function isValidPosition(position: number): boolean {
-    return position >= 0 && position <= 8;
 }
 
 function isValidSign(sign: string): boolean {

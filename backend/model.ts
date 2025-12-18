@@ -4,5 +4,5 @@ export interface Grid {
     turn: "X" | "O";
     players: Record<string, string>; // player IDs
     gameOver: boolean;
-    winner: string | null;
+    winner: "X" | "O" | null;
 }
