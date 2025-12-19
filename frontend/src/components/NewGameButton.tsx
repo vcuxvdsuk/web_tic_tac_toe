@@ -46,7 +46,11 @@ export default function NewGameButton({ onCreated }: NewGameButtonProps) {
     }, []);
 
     return (
-        <button disabled={loading} onClick={handleNewGame}>
+        <button
+            className="btn-reset"
+            disabled={loading}
+            onClick={handleNewGame}
+        >
             {loading ? "Creating..." : "New Game"}
         </button>
     );

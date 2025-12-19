@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
 import { socket } from "../socket";
+import Status from "./Status";
 
 interface GridProps {
     initialGrid: FullGridDto;
@@ -72,18 +73,29 @@ export default function Grid({ initialGrid }: GridProps) {
     }, []);
 
     return (
-        <div className="grid">
-            {grid?.cells.map((row, rowIndex) =>
-                row.map((cell, colIndex) => (
-                    <div
-                        key={`${rowIndex}-${colIndex}`}
-                        className="cell"
-                        onClick={() => handleClick(rowIndex, colIndex)}
-                    >
-                        {cell}
-                    </div>
-                ))
-            )}
+        <div className="game-container">
+            <Status
+                turn={grid.turn}
+                players={grid.players}
+                gameOver={grid.gameOver}
+                winner={grid.winner}
+            />
+
+            <div className="grid">
+                {grid.cells.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => (
+                        <div
+                            key={`${rowIndex}-${colIndex}`}
+                            className={`cell ${
+                                cell === "X" ? "x" : cell === "O" ? "o" : ""
+                            }`}
+                            onClick={() => handleClick(rowIndex, colIndex)}
+                        >
+                            {cell}
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
     );
 }

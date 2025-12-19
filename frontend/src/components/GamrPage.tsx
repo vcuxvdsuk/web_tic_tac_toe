@@ -8,22 +8,14 @@ export default function Game() {
     const [grid, setGrid] = useState<FullGridDto | null>(null);
 
     return (
-        <div
-            style={{
-                padding: "20px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-            }}
-        >
-            <JoinButton onJoined={(grid) => setGrid(grid)} />
-            <NewGameButton onCreated={(grid) => setGrid(grid)} />
-
+        <div className="game-container">
             {grid ? (
                 <Grid key={grid.id} initialGrid={grid} />
             ) : (
                 <p>No active grid yet</p>
             )}
+            <JoinButton onJoined={(grid) => setGrid(grid)} />
+            <NewGameButton onCreated={(grid) => setGrid(grid)} />
         </div>
     );
 }
